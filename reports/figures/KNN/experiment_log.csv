@@ -1,0 +1,13 @@
+model_name,n_neighbors,weights,distance,primary_metric,evaluation_split,mean_cv_malignant_recall,std_cv_malignant_recall,mean_cv_train_recall,run_timestamp_utc
+KNeighborsClassifier,3,uniform,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.9141538461538461,0.05594925849935116,0.9468841001747235,2026-09-27T02:06:07.228718+00:00
+KNeighborsClassifier,3,distance,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.9141538461538461,0.05594925849935116,1.0,2026-09-27T02:06:07.228718+00:00
+KNeighborsClassifier,5,uniform,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.9221538461538461,0.08054018806466198,0.938982721801592,2026-09-27T02:06:07.228718+00:00
+KNeighborsClassifier,5,distance,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.9221538461538461,0.08054018806466198,1.0,2026-09-27T02:06:07.228718+00:00
+KNeighborsClassifier,7,uniform,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.8750769230769231,0.09139238506208973,0.9370219374878663,2026-09-27T02:06:07.228718+00:00
+KNeighborsClassifier,7,distance,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.8750769230769231,0.09139238506208973,1.0,2026-09-27T02:06:07.228718+00:00
+KNeighborsClassifier,9,uniform,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.875076923076923,0.09482915188557409,0.9271791885070859,2026-09-27T02:06:07.228718+00:00
+KNeighborsClassifier,9,distance,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.8830769230769231,0.09657814078820585,1.0,2026-09-27T02:06:07.228718+00:00
+KNeighborsClassifier,11,uniform,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.8830769230769231,0.09983655281562213,0.9153562415065035,2026-09-27T02:06:07.228718+00:00
+KNeighborsClassifier,11,distance,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.8830769230769231,0.09983655281562213,1.0,2026-09-27T02:06:07.228718+00:00
+KNeighborsClassifier,15,uniform,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.8673846153846153,0.09214549853035842,0.8996117258784702,2026-09-27T02:06:07.228718+00:00
+KNeighborsClassifier,15,distance,minkowski_p2_euclidean,malignant_recall,5-fold stratified CV on training partition,0.8753846153846153,0.09792159645989457,1.0,2026-09-27T02:06:07.228718+00:00
