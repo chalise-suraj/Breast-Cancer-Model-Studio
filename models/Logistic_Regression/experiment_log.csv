@@ -1,0 +1,13 @@
+model_name,C,class_weight,primary_metric,evaluation_split,mean_cv_malignant_recall,std_cv_malignant_recall,mean_cv_train_recall,run_timestamp_utc
+LogisticRegression,0.001,None,malignant_recall,5-fold stratified CV on training partition,0.6393846153846153,0.12558068671471598,0.6359153562415065,2026-09-27T01:04:08.809043+00:00
+LogisticRegression,0.001,balanced,malignant_recall,5-fold stratified CV on training partition,0.875076923076923,0.09482915188557409,0.8799844690351388,2026-09-27T01:04:08.809043+00:00
+LogisticRegression,0.01,None,malignant_recall,5-fold stratified CV on training partition,0.8596923076923076,0.09199125247839808,0.8662201514269073,2026-09-27T01:04:08.809043+00:00
+LogisticRegression,0.01,balanced,malignant_recall,5-fold stratified CV on training partition,0.9221538461538461,0.1001849177844614,0.9507474276839449,2026-09-27T01:04:08.809043+00:00
+LogisticRegression,0.1,None,malignant_recall,5-fold stratified CV on training partition,0.9455384615384614,0.051995448139418275,0.9566880217433509,2026-09-27T01:04:08.809043+00:00
+LogisticRegression,0.1,balanced,malignant_recall,5-fold stratified CV on training partition,0.960923076923077,0.0243368860717356,0.9744127353911862,2026-09-27T01:04:08.809043+00:00
+LogisticRegression,1.0,None,malignant_recall,5-fold stratified CV on training partition,0.9375384615384614,0.03930279963528804,0.9743933216851097,2026-09-27T01:04:08.809043+00:00
+LogisticRegression,1.0,balanced,malignant_recall,5-fold stratified CV on training partition,0.9532307692307693,0.03756619404346471,0.9802950883323627,2026-09-27T01:04:08.809043+00:00
+LogisticRegression,10.0,None,malignant_recall,5-fold stratified CV on training partition,0.9529230769230768,0.029377768030227697,0.9881770529994176,2026-09-27T01:04:08.809043+00:00
+LogisticRegression,10.0,balanced,malignant_recall,5-fold stratified CV on training partition,0.9529230769230768,0.029377768030227697,0.9921180353329451,2026-09-27T01:04:08.809043+00:00
+LogisticRegression,100.0,None,malignant_recall,5-fold stratified CV on training partition,0.9452307692307691,0.05774131252056566,1.0,2026-09-27T01:04:08.809043+00:00
+LogisticRegression,100.0,balanced,malignant_recall,5-fold stratified CV on training partition,0.9372307692307693,0.057911583291168446,1.0,2026-09-27T01:04:08.809043+00:00
