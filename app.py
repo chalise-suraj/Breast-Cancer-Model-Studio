@@ -1,302 +1,197 @@
 from __future__ import annotations
-
-import json
-import secrets
+import json, secrets
 from pathlib import Path
-
-import joblib
-import numpy as np
-import pandas as pd
-import streamlit as st
-from sklearn.metrics import (accuracy_score, f1_score, precision_score,
-                             recall_score, roc_auc_score)
+import joblib, numpy as np, pandas as pd, streamlit as st
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 
-ROOT = Path(__file__).resolve().parent
-DATA_PATH = ROOT / "data" / "raw" / "Raw_Breast_Cancer_Data.csv"
-MODEL_CONFIG = {
-    "Logistic Regression": {
-        "model_path": ROOT / "models" / "Logistic_Regression" / "logistic_regression_pipeline.joblib",
-        "metadata_path": ROOT / "reports" / "figures" / "Logistic_Regression" / "model_metadata.json",
-    },
-    "KNN": {
-        "model_path": ROOT / "models" / "KNN" / "knn_pipeline.joblib",
-        "metadata_path": ROOT / "reports" / "figures" / "KNN" / "model_metadata.json",
-    },
-}
-SEED = 42
-CLASS_LABELS = {
-    0: ("Benign", "Non-cancerous pattern predicted · B"),
-    1: ("Malignant", "Cancerous pattern predicted · M"),
-}
-
-st.set_page_config(
-    page_title="Model Lab | Breast Cancer Prediction",
-    page_icon="🧬",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
+ROOT=Path(__file__).resolve().parent
+DATA=ROOT/"data"/"raw"/"Raw_Breast_Cancer_Data.csv"
+CONFIG={
+ "Logistic Regression":(ROOT/"models"/"Logistic_Regression"/"logistic_regression_pipeline.joblib",ROOT/"reports"/"figures"/"Logistic_Regression"/"model_metadata.json"),
+ "KNN":(ROOT/"models"/"KNN"/"knn_pipeline.joblib",ROOT/"reports"/"figures"/"KNN"/"model_metadata.json")}
+GROUPS=[("Mean","Average measurements across cells","mean"),("Variation","Variation across cells","_se"),("Largest","Largest measurements observed","_worst")]
+LABELS={0:("No cancer predicted","Benign pattern · B","#087F72"),1:("Cancer predicted","Malignant pattern · M","#B54643")}
+st.set_page_config(page_title="CellScope | Model exploration",page_icon="◈",layout="wide")
 st.markdown("""
 <style>
-    :root { --ink:#17324D; --muted:#5C6B78; --teal:#147D78; --orange:#C76B37; --paper:#F4F7FA; }
-    .stApp { background:var(--paper); }
-    .block-container { max-width:1220px; padding-top:1.6rem; padding-bottom:3rem; }
-    .hero { background:linear-gradient(120deg,#102A43 0%,#155E68 100%); padding:1.65rem 1.8rem; border-radius:20px; color:white; margin-bottom:1.1rem; box-shadow:0 10px 26px rgba(16,42,67,.13); }
-    .hero h1 { color:white; font-size:2.1rem; margin:0 0 .35rem 0; letter-spacing:-.02em; }
-    .hero p { color:#DCEAF0; margin:0; font-size:1rem; }
-    .safety { background:#FFF8E9; border:1px solid #F1D9A7; border-left:5px solid #C78A26; color:#59441D; padding:.8rem 1rem; border-radius:10px; margin:.9rem 0 1.3rem 0; }
-    .result-card { border-radius:16px; }
-    div[data-testid="stMetric"] { background:white; border:1px solid #E2E8EE; padding:1rem 1.1rem; border-radius:14px; }
-    .muted { color:var(--muted); }
-    @media (max-width: 760px) { .block-container {padding-left:1rem;padding-right:1rem;} .hero h1 {font-size:1.65rem;} }
-</style>
-""", unsafe_allow_html=True)
-
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+:root{--ink:#142B3B;--muted:#667887;--line:#E4E9ED;--paper:#F4F7F6;--teal:#087F72}
+.stApp{background:var(--paper);font-family:'DM Sans',sans-serif}.block-container{max-width:1240px;padding-top:2rem;padding-bottom:3rem}
+body,.stApp,[data-testid="stAppViewContainer"],.stMarkdown p,.stMarkdown li,div[data-testid="stRadio"] label,div[data-testid="stRadio"] label p,button[data-baseweb="tab"],label{color:var(--ink)}
+.stCaption,[data-testid="stCaptionContainer"]{color:var(--muted)!important}
+h1,h2,h3{font-family:'Manrope',sans-serif!important;color:var(--ink)}
+.hero{padding:2rem 2.2rem;background:linear-gradient(120deg,#132D40,#145E60);border-radius:24px;color:white;box-shadow:0 16px 36px #143d3c20;margin:.3rem 0 1rem}
+.brand{font-size:.78rem;letter-spacing:.15em;font-weight:700;color:#BFE8E1;text-transform:uppercase}
+.hero h1{color:white!important;font-size:2.45rem;line-height:1.12;margin:.5rem 0}.hero p{color:#D4E7E5;font-size:1.05rem;margin:0;max-width:760px}
+.notice{padding:.9rem 1.1rem;background:#FFF9EB;border:1px solid #F0DCA9;border-radius:13px;color:#614B21;margin:.9rem 0 1.2rem}
+.eyebrow{font-size:.76rem;letter-spacing:.13em;font-weight:700;text-transform:uppercase;color:var(--teal)}
+.subtle{color:var(--muted);font-size:.93rem}.step-card{background:white;border:1px solid var(--line);border-radius:16px;padding:1rem;min-height:112px}
+.step-num{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:#E5F3F0;color:#087F72;border-radius:50%;font-weight:700;margin-right:.55rem}
+.result-title{font-family:'Manrope';font-size:1.55rem;font-weight:800;line-height:1.2;margin:.35rem 0}
+.stButton>button[kind=primary]{background:#087F72;border-color:#087F72;color:white;border-radius:12px;min-height:3rem;font-weight:700}
+.stButton>button{border-radius:11px;min-height:2.65rem}div[data-testid="stMetric"]{background:white;border:1px solid var(--line);padding:1rem;border-radius:15px}
+div[data-testid="stExpander"]{background:white;border:1px solid var(--line);border-radius:14px}
+@media(max-width:760px){.block-container{padding:1rem .85rem 2rem}.hero{padding:1.4rem 1.2rem;border-radius:18px}.hero h1{font-size:1.85rem}}
+</style>""",unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False)
-def load_data() -> pd.DataFrame:
-    if not DATA_PATH.exists():
-        raise FileNotFoundError(f"Dataset not found: {DATA_PATH}")
-    frame = pd.read_csv(DATA_PATH)
-    blank_columns = frame.columns[frame.isna().all()].tolist()
-    return frame.drop(columns=blank_columns).copy()
+def load_data():
+ if not DATA.exists(): raise FileNotFoundError(f"Dataset not found: {DATA}")
+ frame=pd.read_csv(DATA)
+ return frame.drop(columns=frame.columns[frame.isna().all()].tolist()).copy()
 
+@st.cache_resource(show_spinner="Preparing the model studio…")
+def load_models():
+ models={}; shared=None
+ for name,(path,metadata_path) in CONFIG.items():
+  if not path.exists() or not metadata_path.exists(): raise FileNotFoundError(f"Saved {name} model or metadata missing.")
+  features=json.loads(metadata_path.read_text(encoding="utf-8")).get("features")
+  model=joblib.load(path)
+  if not features or list(model.feature_names_in_)!=features: raise ValueError(f"{name} metadata does not match model.")
+  if shared is not None and features!=shared: raise ValueError("Models use different ordered features.")
+  shared=features; models[name]=model
+ return models,shared or []
 
-@st.cache_resource(show_spinner="Loading the saved model pipelines…")
-def load_models() -> tuple[dict[str, object], list[str]]:
-    models: dict[str, object] = {}
-    shared_features: list[str] | None = None
-    for name, config in MODEL_CONFIG.items():
-        if not config["model_path"].exists() or not config["metadata_path"].exists():
-            raise FileNotFoundError(f"The saved {name} model or its metadata is missing.")
-        metadata = json.loads(config["metadata_path"].read_text(encoding="utf-8"))
-        estimator = joblib.load(config["model_path"])
-        features = metadata.get("features")
-        if not features or list(estimator.feature_names_in_) != features:
-            raise ValueError(f"Feature metadata does not match the saved {name} pipeline.")
-        if shared_features is not None and features != shared_features:
-            raise ValueError("The two models do not use the same ordered features.")
-        shared_features = features
-        models[name] = estimator
-    return models, shared_features or []
+def group_features(features,suffix):
+ return [f for f in features if f.endswith("_mean" if suffix=="mean" else suffix)]
 
+def predict(models,features,values):
+ row=pd.DataFrame([[values[f] for f in features]],columns=features); out=[]
+ for name,model in models.items():
+  label=int(model.predict(row)[0]); classes=list(model.classes_)
+  score=float(model.predict_proba(row)[0,classes.index(1)])
+  out.append({"name":name,"label":label,"score":score})
+ return out
 
-def test_set_comparison(models: dict[str, object], features: list[str], frame: pd.DataFrame) -> pd.DataFrame:
-    """Calculate aggregate model errors on the same untouched test split used in Notebook 4."""
-    actual = frame["diagnosis"].map({"B": 0, "M": 1})
-    _, test_indices = train_test_split(
-        np.arange(len(frame)), test_size=0.20, random_state=SEED, stratify=actual
-    )
-    test_frame = frame.iloc[test_indices]
-    x_test = test_frame[features]
-    y_test = actual.iloc[test_indices].to_numpy()
-    rows = []
-    for name, estimator in models.items():
-        prediction = estimator.predict(x_test)
-        malignant_score = estimator.predict_proba(x_test)[:, list(estimator.classes_).index(1)]
-        tn = int(((y_test == 0) & (prediction == 0)).sum())
-        fp = int(((y_test == 0) & (prediction == 1)).sum())
-        fn = int(((y_test == 1) & (prediction == 0)).sum())
-        rows.append({
-            "Model": name,
-            "Wrong predictions": fn + fp,
-            "Error rate": (fn + fp) / len(y_test),
-            "Missed cancerous cases (FN)": fn,
-            "False cancer alarms (FP)": fp,
-            "Malignant recall": recall_score(y_test, prediction, pos_label=1, zero_division=0),
-            "Precision": precision_score(y_test, prediction, pos_label=1, zero_division=0),
-            "F1 score": f1_score(y_test, prediction, pos_label=1, zero_division=0),
-            "Accuracy": accuracy_score(y_test, prediction),
-            "ROC-AUC": roc_auc_score(y_test, malignant_score),
-        })
-    return pd.DataFrame(rows).set_index("Model")
+def show_predictions(results):
+ st.markdown('<div class="eyebrow">Your model results</div>',unsafe_allow_html=True)
+ st.markdown("### Two independent predictions")
+ st.caption("Both saved models assessed the same profile. The score is for the malignant class, not a medical risk estimate.")
+ cols=st.columns(2)
+ for col,result in zip(cols,results):
+  title,detail,color=LABELS[result["label"]]
+  with col,st.container(border=True):
+   st.markdown(f"**{result['name']}**")
+   st.markdown(f"<div class='result-title' style='color:{color}'>{title}</div>",unsafe_allow_html=True)
+   st.caption(detail)
+   st.progress(result["score"],text=f"Malignant-class model score · {result['score']:.1%}")
+   st.caption("Not calibrated as individual medical risk.")
+ if results[0]["label"]==results[1]["label"]: st.success("Both models returned the same class for this example.")
+ else: st.warning("The models returned different classes for this example.")
+ st.caption("A prediction cannot show whether either model was right: this profile has no confirmed diagnosis.")
 
+def profile_chart(values,features,reference):
+ vals=np.array([values[n] for n in features]); means=reference[features].mean().to_numpy()
+ std=reference[features].std().replace(0,np.nan).fillna(1).to_numpy()
+ chart=pd.DataFrame({"Measurement":features,"Distance from training average (SD)":(vals-means)/std})
+ chart["magnitude"]=chart["Distance from training average (SD)"].abs()
+ top=chart.nlargest(7,"magnitude").sort_values("Distance from training average (SD)")
+ st.markdown("#### Measurement profile")
+ st.caption("Largest differences from training-set averages in standard deviations. Descriptive context, not an explanation of the prediction.")
+ st.bar_chart(top.set_index("Measurement")[["Distance from training average (SD)"]],horizontal=True,color="#168B7D")
 
-def predict_both(models: dict[str, object], feature_names: list[str], values: dict[str, float]) -> list[dict]:
-    row = pd.DataFrame([[values[name] for name in feature_names]], columns=feature_names)
-    predictions = []
-    for name, estimator in models.items():
-        label = int(estimator.predict(row)[0])
-        classes = list(estimator.classes_)
-        score = float(estimator.predict_proba(row)[0, classes.index(1)])
-        predictions.append({"name": name, "label": label, "score": score})
-    return predictions
+def comparison(frame,features,models):
+ y=frame["diagnosis"].map({"B":0,"M":1})
+ _,indices=train_test_split(np.arange(len(frame)),test_size=.2,random_state=42,stratify=y)
+ X=frame.iloc[indices][features]; actual=y.iloc[indices].to_numpy(); rows=[]
+ for name,model in models.items():
+  pred=model.predict(X); score=model.predict_proba(X)[:,list(model.classes_).index(1)]
+  fn=int(((actual==1)&(pred==0)).sum()); fp=int(((actual==0)&(pred==1)).sum())
+  rows.append({"Model":name,"Wrong predictions":fn+fp,"Error rate":(fn+fp)/len(actual),
+   "Missed cancer cases":fn,"False cancer alarms":fp,"Malignant recall":recall_score(actual,pred,pos_label=1,zero_division=0),
+   "Precision":precision_score(actual,pred,pos_label=1,zero_division=0),"F1 score":f1_score(actual,pred),
+   "Accuracy":accuracy_score(actual,pred),"ROC-AUC":roc_auc_score(actual,score)})
+ return pd.DataFrame(rows).set_index("Model"),len(actual)
 
+st.markdown("""<div class="hero"><div class="brand">CellScope · Model Studio</div>
+<h1>Explore a cell profile.<br>See two model perspectives.</h1>
+<p>Adjust measurements or create a synthetic example. Logistic Regression and KNN return separate predictions for the same profile.</p></div>
+<div class="notice"><strong>Educational demonstration only.</strong> This tool is not for diagnosis or treatment decisions. Consult a qualified healthcare professional about medical concerns.</div>""",unsafe_allow_html=True)
+try: data=load_data(); models,features=load_models()
+except Exception as exc: st.error(f"Could not load the dataset or saved models: {exc}"); st.stop()
+if not {"diagnosis","id"}.issubset(data.columns) or data["diagnosis"].isna().any() or not set(data["diagnosis"].unique()).issubset({"B","M"}):
+ st.error("Dataset columns or diagnosis labels do not match this app."); st.stop()
+if features!=[c for c in data.columns if c not in ["diagnosis","id"]]:
+ st.error("Dataset feature columns do not match saved model inputs."); st.stop()
+feature_frame=data[features]; y=data["diagnosis"].map({"B":0,"M":1})
+indices=np.arange(len(data)); train_dev,_=train_test_split(indices,test_size=.2,random_state=42,stratify=y)
+train_indices,_=train_test_split(train_dev,test_size=.25,random_state=42,stratify=y.iloc[train_dev])
+training=feature_frame.iloc[train_indices]; medians=training.median(); stds=training.std().fillna(0)
+def clear_active_profile():
+ for key in ("active_values","active_predictions"):
+  st.session_state.pop(key,None)
 
-def display_predictions(predictions: list[dict]) -> None:
-    columns = st.columns(2)
-    for column, result in zip(columns, predictions):
-        label, explanation = CLASS_LABELS[result["label"]]
-        color = "#A33D32" if result["label"] == 1 else "#147D78"
-        with column:
-            with st.container(border=True):
-                st.markdown(f"**{result['name']}**")
-                st.markdown(
-                    f"<div style='font-size:1.45rem;font-weight:750;color:{color};margin:.45rem 0'>{label}</div>",
-                    unsafe_allow_html=True,
-                )
-                st.caption(explanation)
-                st.progress(result["score"], text=f"Model score for malignant class: {result['score']:.1%}")
-                st.caption("This score is not a calibrated medical risk.")
-    if predictions[0]["label"] == predictions[1]["label"]:
-        st.info("The models predict the same class. Agreement does not establish that the prediction is correct.")
-    else:
-        st.warning("The models predict different classes. A known diagnosis is needed to tell which prediction is wrong.")
+page=st.radio("Studio view",["Prediction studio","Model error comparison"],horizontal=True,label_visibility="collapsed",key="studio_page")
 
-
-st.markdown("""
-<div class="hero">
-  <h1>Breast Cancer Model Lab</h1>
-  <p>Enter cell measurements or generate a synthetic example, then compute predictions from both saved models.</p>
-</div>
-<div class="safety"><strong>Research demonstration only.</strong> These models are not medical devices and must not be used to diagnose or guide care. A “benign” prediction does not rule out cancer.</div>
-""", unsafe_allow_html=True)
-
-try:
-    data = load_data()
-    models, feature_names = load_models()
-except Exception as exc:
-    st.error(f"Could not load the dataset or saved models: {exc}")
-    st.stop()
-
-if not {"diagnosis", "id"}.issubset(data.columns):
-    st.error("The dataset is missing the expected diagnosis or record ID column.")
-    st.stop()
-if data["diagnosis"].isna().any() or not set(data["diagnosis"].unique()).issubset({"B", "M"}):
-    st.error("The dataset contains missing or unexpected diagnosis labels.")
-    st.stop()
-if feature_names != [c for c in data.columns if c not in ["diagnosis", "id"]]:
-    st.error("The dataset feature columns do not match the saved model inputs.")
-    st.stop()
-
-feature_frame = data[feature_names]
-labels = data["diagnosis"].map({"B": 0, "M": 1})
-indices = np.arange(len(data))
-train_dev_indices, _ = train_test_split(
-    indices, test_size=0.20, random_state=SEED, stratify=labels
-)
-train_indices, _ = train_test_split(
-    train_dev_indices, test_size=0.25, random_state=SEED,
-    stratify=labels.iloc[train_dev_indices]
-)
-training_features = feature_frame.iloc[train_indices]
-training_medians = training_features.median()
-training_stds = training_features.std().fillna(0)
-
-predict_tab, errors_tab = st.tabs(["Make a prediction", "Compare model errors"])
-
-with predict_tab:
-    st.subheader("Choose your input method")
-    input_mode = st.radio(
-        "How would you like to provide the measurements?",
-        ["Enter measurements", "Generate random features"],
-        horizontal=True,
-        label_visibility="collapsed",
-        key="input_mode",
-    )
-    st.caption("The app uses 30 numeric measurements. Record ID and diagnosis are not model inputs.")
-
-    if input_mode == "Enter measurements":
-        st.markdown("#### Cell measurements")
-        st.caption("Values start at the training-set medians. Adjust the measurements, then compute both model outputs.")
-        groups = [
-            ("Mean values", [name for name in feature_names if name.endswith("_mean")]),
-            ("Standard error", [name for name in feature_names if name.endswith("_se")]),
-            ("Worst values", [name for name in feature_names if name.endswith("_worst")]),
-        ]
-        input_values: dict[str, float] = {}
-        with st.form("manual_measurements"):
-            group_tabs = st.tabs([group[0] for group in groups])
-            for group_tab, (_, group_features) in zip(group_tabs, groups):
-                with group_tab:
-                    left, right = st.columns(2)
-                    for position, feature in enumerate(group_features):
-                        step = max(float(training_stds[feature]) / 100, 0.0001)
-                        number_format = "%.5f" if step < 0.1 else "%.2f"
-                        target_column = left if position % 2 == 0 else right
-                        with target_column:
-                            input_values[feature] = st.number_input(
-                                feature.replace("_", " ").title(),
-                                min_value=0.0,
-                                value=max(0.0, float(training_medians[feature])),
-                                step=step,
-                                format=number_format,
-                                key=f"manual_{feature}",
-                            )
-            manual_submitted = st.form_submit_button(
-                "Compute Output", type="primary", width="stretch"
-            )
-        if manual_submitted:
-            st.session_state["manual_predictions"] = predict_both(models, feature_names, input_values)
-        if st.session_state.get("manual_predictions"):
-            st.markdown("#### Model outputs")
-            display_predictions(st.session_state["manual_predictions"])
-
-    else:
-        st.markdown("#### Create a synthetic feature set")
-        st.markdown(
-            "Random values are generated around a randomly selected training-feature profile, with small noise and nonnegative bounds. "
-            "This keeps values near the observed feature ranges while avoiding reuse of a recorded test row. "
-            "A synthetic example has no known diagnosis, so its prediction error cannot be measured."
-        )
-        if st.button("Generate random values", type="secondary", width="stretch"):
-            generator = np.random.default_rng(secrets.randbits(32))
-            profile_index = int(generator.integers(0, len(training_features)))
-            profile = training_features.iloc[profile_index].to_numpy(dtype=float)
-            noise = generator.normal(0.0, training_stds.to_numpy(dtype=float) * 0.025)
-            generated = np.maximum(profile + noise, 0.0)
-            st.session_state["synthetic_values"] = {
-                feature: float(value) for feature, value in zip(feature_names, generated)
-            }
-            st.session_state.pop("synthetic_predictions", None)
-        if st.session_state.get("synthetic_values"):
-            generated_values = st.session_state["synthetic_values"]
-            with st.expander("Review generated feature values", expanded=False):
-                st.dataframe(
-                    pd.DataFrame({"Measurement": feature_names,
-                                  "Generated value": [generated_values[name] for name in feature_names]}),
-                    hide_index=True,
-                    width="stretch",
-                )
-            if st.button("Compute Output", type="primary", width="stretch", key="compute_synthetic"):
-                st.session_state["synthetic_predictions"] = predict_both(models, feature_names, generated_values)
-            if st.session_state.get("synthetic_predictions"):
-                st.markdown("#### Model outputs")
-                display_predictions(st.session_state["synthetic_predictions"])
-        else:
-            st.info("Generate a feature set first. You can review its values before computing the model outputs.")
-
-with errors_tab:
-    st.subheader("Which model made fewer wrong predictions?")
-    st.markdown(
-        "This comparison uses the fixed 114-record test set with known diagnoses—not your manual or synthetic input. "
-        "Each model's errors are counted against the known diagnosis."
-    )
-    try:
-        errors = test_set_comparison(models, feature_names, data)
-    except Exception as exc:
-        st.error(f"Could not calculate the held-out error comparison: {exc}")
-    else:
-        left, right = st.columns(2)
-        for column, model_name in zip([left, right], errors.index):
-            row = errors.loc[model_name]
-            with column:
-                with st.container(border=True):
-                    st.markdown(f"### {model_name}")
-                    st.metric("Wrong predictions", f"{int(row['Wrong predictions'])} / 114",
-                              delta=f"{row['Error rate']:.1%} error rate", delta_color="inverse")
-                    st.write(f"Missed malignant cases: **{int(row['Missed cancerous cases (FN)'])}**")
-                    st.write(f"False malignant alarms: **{int(row['False cancer alarms (FP)'])}**")
-                    st.caption(f"Malignant recall on this test set: {row['Malignant recall']:.1%}")
-        st.markdown("#### Side-by-side metrics")
-        formatted = errors.copy()
-        for column in ["Error rate", "Malignant recall", "Precision", "F1 score", "Accuracy", "ROC-AUC"]:
-            formatted[column] = formatted[column].map(lambda value: f"{value:.1%}")
-        st.dataframe(formatted, width="stretch")
-        st.caption(
-            "The test set has only 42 malignant cases. These measured errors describe this split; they are not a guarantee of future performance. "
-            "Manual and generated inputs have no ground-truth labels, so no per-input error can be calculated for them."
-        )
-
-st.divider()
-st.caption("Neither model retrains in the app. Inputs are processed in memory and are not saved.")
+if page=="Prediction studio":
+ st.markdown('<div class="eyebrow">01 · Choose an input</div>',unsafe_allow_html=True)
+ mode=st.radio("Input method",["Build a profile","Generate a synthetic profile"],horizontal=True,key="input_mode",on_change=clear_active_profile)
+ st.markdown("<p class='subtle'>A profile contains 30 measurements in three groups. Diagnosis and record ID are never model inputs.</p>",unsafe_allow_html=True)
+ if mode=="Build a profile":
+  with st.form("manual_measurements"):
+   cards=st.columns(3)
+   for i,(title,description,suffix) in enumerate(GROUPS):
+    group=group_features(features,suffix)
+    with cards[i]:
+     st.markdown(f"<div class='step-card'><span class='step-num'>{i+1}</span><strong>{title}</strong><br><span class='subtle'>{description}</span><br><span class='subtle'>{len(group)} measurements</span></div>",unsafe_allow_html=True)
+   tabs=st.tabs([f"{title} · {len(group_features(features,suffix))}" for title,_,suffix in GROUPS]); values={}
+   for tab,(title,description,suffix) in zip(tabs,GROUPS):
+    group=group_features(features,suffix)
+    with tab:
+     st.caption(f"{description}. Starting values use training-data medians; adjust as needed.")
+     cols=st.columns(3)
+     for i,feature in enumerate(group):
+      step=max(float(stds[feature])/100,.0001); fmt="%.5f" if step<.1 else "%.2f"
+      with cols[i%3]:
+       values[feature]=st.number_input(feature.replace("_"," ").title(),min_value=0.0,value=max(0.,float(medians[feature])),
+        step=step,format=fmt,key=f"manual_{feature}",
+        help=f"Training median {medians[feature]:.4g} · observed range {feature_frame[feature].min():.4g}–{feature_frame[feature].max():.4g}")
+   st.caption("Move between the measurement groups before computing.")
+   submitted=st.form_submit_button("Compute Output",type="primary",width="stretch")
+  if submitted:
+   st.session_state["active_values"]=values; st.session_state["active_predictions"]=predict(models,features,values)
+ else:
+  st.markdown("### Create a new example")
+  st.markdown("A new synthetic profile varies a randomly selected training profile slightly. It is not a saved record and has no known diagnosis.")
+  if st.button("✦  Generate random values",width="stretch"):
+   rng=np.random.default_rng(secrets.randbits(32))
+   base=training.iloc[int(rng.integers(0,len(training)))].to_numpy(float)
+   generated=np.maximum(base+rng.normal(0,stds.to_numpy(float)*.025),0)
+   st.session_state["active_values"]=dict(zip(features,generated.astype(float)))
+   st.session_state.pop("active_predictions",None)
+  if st.session_state.get("active_values"):
+   values=st.session_state["active_values"]; st.markdown("#### Profile preview")
+   cols=st.columns(3)
+   for col,(title,_,suffix) in zip(cols,GROUPS):
+    group=group_features(features,suffix); col.metric(title,f"{np.mean([values[f] for f in group]):.3g}",help=f"Average across {len(group)} features; feature units differ.")
+   with st.expander("Explore all 30 generated measurements"):
+    st.dataframe(pd.DataFrame({"Measurement":features,"Value":[values[n] for n in features]}),hide_index=True,width="stretch")
+   if st.button("Compute Output",type="primary",width="stretch",key="compute_generated"):
+    st.session_state["active_predictions"]=predict(models,features,values)
+  else: st.info("Generate a profile to preview its feature groups and run both models.")
+ if st.session_state.get("active_predictions") and st.session_state.get("active_values"):
+  st.divider(); show_predictions(st.session_state["active_predictions"])
+  with st.expander("See the profile in context"):
+   profile_chart(st.session_state["active_values"],features,training)
+  st.button("Start a new profile",on_click=lambda:[st.session_state.pop(k,None) for k in ("active_predictions","active_values")],key="reset_profile")
+else:
+ st.markdown('<div class="eyebrow">02 · Held-out evaluation</div>',unsafe_allow_html=True)
+ st.markdown("### How many predictions did each model get wrong?")
+ st.markdown("This page evaluates both models on the same held-out test records with known diagnoses. It does not score your profile.")
+ try: errors,total=comparison(data,features,models)
+ except Exception as exc: st.error(f"Could not calculate the test-set comparison: {exc}")
+ else:
+  cols=st.columns(2)
+  for col,name in zip(cols,errors.index):
+   row=errors.loc[name]
+   with col,st.container(border=True):
+    st.markdown(f"### {name}"); st.metric("Wrong predictions",f"{int(row['Wrong predictions'])} of {total}",delta=f"{row['Error rate']:.1%} error rate",delta_color="inverse")
+    st.progress(1-row["Error rate"],text=f"Correct on this test set · {1-row['Error rate']:.1%}")
+    a,b=st.columns(2); a.metric("Missed cancer cases",int(row["Missed cancer cases"])); b.metric("False cancer alarms",int(row["False cancer alarms"]))
+  st.markdown("#### Error count at a glance")
+  st.bar_chart(errors[["Wrong predictions"]].rename(columns={"Wrong predictions":"Wrong predictions (lower is better)"}),horizontal=True,color="#168B7D")
+  with st.expander("More evaluation measures"):
+   st.dataframe(errors[["Malignant recall","Precision","F1 score","Accuracy","ROC-AUC"]].style.format("{:.1%}"),width="stretch")
+  st.caption(f"Fixed {total}-record test set; these values describe this split, not future performance. Manual or synthetic profiles have no confirmed labels, so their individual error cannot be calculated.")
+st.divider(); st.caption("Models run in the app. Inputs are processed in memory and are not saved. For learning and model comparison.")
