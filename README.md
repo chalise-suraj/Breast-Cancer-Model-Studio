@@ -82,6 +82,15 @@ These are results on one fixed test split; they do not guarantee future performa
 
 Docker packages the app, both saved model pipelines, their feature metadata, and the CSV used by the app. It **loads existing models** at startup; it does not train them.
 
+The image repository is on [Docker Hub](https://hub.docker.com/repository/docker/surajchalise/breast-cancer-model-studio/general). After the image is pushed, pull and run it without building locally:
+
+~~~powershell
+docker pull surajchalise/breast-cancer-model-studio:latest
+docker run --rm -p 8501:8501 surajchalise/breast-cancer-model-studio:latest
+~~~
+
+Then open [http://localhost:8501](http://localhost:8501).
+
 ### 1. Build the image
 
 From the project root in PowerShell:
